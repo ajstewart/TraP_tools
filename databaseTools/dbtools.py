@@ -21,6 +21,17 @@ def access(engine,host,port,user,password,database):
     print 'connected!'
     return session
 
+def GetImages(session, dataset_id):
+    images_query = session.query(Image).filter(Image.dataset_id == dataset_id)
+    images = pd.read_sql(images_query.statement, session.bind)
+    return images
+    
+def GetExtractedSources(session, dataset_id):
+    extracted_sources_query = session.query(Extractedsource).select_from(join(Extractedsource,Image)).filter(Image.dataset_id == dataset_id)
+    extracted_sources = pd.read_sql(extracted_sources_query.statement, session.bind)
+    return extracted_sources
+
+
 def GetVarParams(session,dataset_id):
     # Returns all the variability parameters for sources in a given dataset
     VarParams = session.query(Varmetric,Runningcatalog).select_from(join(Varmetric,Runningcatalog)).filter(Runningcatalog.dataset_id == dataset_id).all()
