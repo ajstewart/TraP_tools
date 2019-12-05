@@ -164,13 +164,21 @@ def create_thumbnails(source_ids, size, full_wcs, img_data, rms, coords, ellipse
 
 
 # The input database, dataset and thresholds
-dataset_id = 4
-database = 's190814bv'
+dataset_id = 8
+database = 's190510g'
+monitor_only = False
+newsource_only = False
+#run cat ids
+user_choice = False
+user_choice_file = ""
+
+if monitor_only and newsource_only:
+    sys.exit()
 # sigma1 = 2 # Threshold on the reduced weighted chi^2
 # sigma2 = 2 # Threshold on the variability parameter
 # websiteURL = 'http://banana.transientskp.org/r4/vlo_'+database+'/runningcatalog/'
 
-outdir = os.path.join("thumbnails",engine+"_"+database,str(dataset_id))
+outdir = os.path.join("thumbnails",engine.replace("postgresql", "postgres")+"_"+database,str(dataset_id))
 
 if os.path.isdir(outdir):
     print "Directory already exists!"
@@ -186,14 +194,27 @@ extracted_sources = dbtools.GetExtractedSources(session,dataset_id)
 session.close()
 n_workers = 18
 workers = multiprocessing.Pool(processes=n_workers)
+if newsource_only:
+    newsources = dbtools.GetNewSources(session, dataset_id)
+    newsource_xtrsrc_id = newsources["trigger_xtrsrc"].tolist()
 # now create thumbnails of every single source for each image
 for i,row in images.iterrows():
     this_url = row["url"]
     this_rms = row["rms_qc"]
     print "Image: {}".format(this_url.split("/")[-1])
     full_hdu, full_wcs, full_header, img_data = load_image(this_url)
-  
     sources = extracted_sources[extracted_sources["image"]==row["id"]].reset_index(drop=True)
+    if monitor_only:
+        sources = sources[sources["extract_type"]==2].reset_index(drop=True)
+    elif user_choice:
+        user_file = pd.read_csv(user_choice_file)
+        runcat_ids = user_file["runcat_id"].tolist()
+        sources = sources[sources["runcat"].isin(runcat_ids)].reset_index(drop=True)
+    elif newsource_only:
+        sources = sources[sources["id"].isin(newsource_xtrsrc_id)].reset_index(drop=True)
+        if len(sources.index)==0:
+            print "Skipping {} no new sources.".format(this_url.split("/")[-1])
+            continue
     sources_dict = {row["id"]:SkyCoord(row["ra"], row["decl"], unit=(u.deg, u.deg)) for i, row in sources.iterrows()}
     ellipse_dict = {row["id"]:[row["ra"],row["decl"],2.*row["semimajor"]/3600.,2.*row["semiminor"]/3600., 
         row["pa"], row["extract_type"]] for i, row in sources.iterrows()}
@@ -214,8 +235,8 @@ for i,row in images.iterrows():
         
     create_thumbnails_multi = partial(create_thumbnails, size=Angle(5, unit=u.arcmin), full_wcs = full_wcs, img_data=img_data, rms=this_rms, 
         coords=sources_dict, ellipses=ellipse_dict, outdir=outdir)
-    print "Launching thumbnail production with {} processes. {} to do, be patient!".format(n_workers, len(to_loop))
-    workers.map(create_thumbnails_multi, to_loop, n_workers)
+    print "Launching thumbnail production with {} processes. {} to do, be patient!".format(n_workers, num_sources)
+    workers.map(create_thumbnails_multi, to_loop)
     
 workers.close()
     

@@ -3,7 +3,6 @@ import numpy as np
 
 from scipy.stats import norm
 
-    
 def SigmaFit(data):
     median = np.median(data)
     std_median = np.sqrt(np.mean([(i-median)**2. for i in data]))
