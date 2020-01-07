@@ -34,7 +34,14 @@ def make_bins(x):
     binsx = binsx + [new_bins[-1]]
     return binsx
 
-def diagnostic_plot(df, sigcutx, sigcuty):
+def diagnostic_plot(df, sigcutx, sigcuty, peak=False):
+    
+    if peak:
+        v_int = "v_int_peak"
+        eta_int = "eta_int_peak"
+    else:
+        v_int = "v_int"
+        eta_int = "eta_int"
     
     frequencies = df.freq_central.unique()
     freq_labels=["{:.0f} MHz".format(f/1.e6) for f in frequencies]
@@ -57,8 +64,8 @@ def diagnostic_plot(df, sigcutx, sigcuty):
         dfTMP=df.loc[(df['freq_central']==frequencies[i])]
         xdata_ax3=dfTMP['lightcurve_max']
         xdata_ax4=dfTMP['lightcurve_max']/dfTMP['lightcurve_avg']
-        ydata_ax1=dfTMP['eta_int']
-        ydata_ax3=dfTMP['v_int']
+        ydata_ax1=dfTMP[eta_int]
+        ydata_ax3=dfTMP[v_int]
         ax1.scatter(xdata_ax3, ydata_ax1, s=10., zorder=5)
         ax2.scatter(xdata_ax4, ydata_ax1, s=10., zorder=6)
         ax3.scatter(xdata_ax3, ydata_ax3, s=10., zorder=7)
@@ -67,8 +74,8 @@ def diagnostic_plot(df, sigcutx, sigcuty):
 
     Xax3=df['lightcurve_max']
     Xax4=df['lightcurve_max']/dfTMP['lightcurve_avg']
-    Yax1=df['eta_int']
-    Yax3=df['v_int']
+    Yax1=df[eta_int]
+    Yax3=df[v_int]
     
     if sigcutx != 0 or sigcuty != 0:
         ax1.axhline(y=10.**sigcutx, linewidth=2, color='k', linestyle='--')
@@ -106,8 +113,15 @@ def diagnostic_plot(df, sigcutx, sigcuty):
     plt.show()
     plt.close()
     
-def eta_vs_v_plot(df, sigcutx, sigcuty, paramx, paramy):
+def eta_vs_v_plot(df, sigcutx, sigcuty, paramx, paramy, peak=False):
 
+    if peak:
+        v_int = "v_int_peak"
+        eta_int = "eta_int_peak"
+    else:
+        v_int = "v_int"
+        eta_int = "eta_int"
+        
     frequencies = df.freq_central.unique()
 
     nullfmt   = NullFormatter()         # no labels
@@ -132,12 +146,12 @@ def eta_vs_v_plot(df, sigcutx, sigcuty, paramx, paramy):
 
     for i in range(len(frequencies)):
         dfTMP=df.loc[(df['freq_central']==frequencies[i])]
-        xdata_var=np.log10(dfTMP['eta_int'])
-        ydata_var=np.log10(dfTMP['v_int'])
+        xdata_var=np.log10(dfTMP[eta_int])
+        ydata_var=np.log10(dfTMP[v_int])
         axScatter.scatter(xdata_var, ydata_var, s=10., zorder=5, color='C1')
 
-    x = np.log10(df['eta_int'])
-    y = np.log10(df['v_int'])
+    x = np.log10(df[eta_int])
+    y = np.log10(df[v_int])
 
     axHistx.hist(x, bins=make_bins(x), normed=1, histtype='stepfilled', color='C0')
     axHisty.hist(y, bins=make_bins(y), normed=1, histtype='stepfilled', orientation='horizontal', color='C0')
@@ -174,28 +188,38 @@ def eta_vs_v_plot(df, sigcutx, sigcuty, paramx, paramy):
     plt.show()
     plt.close()
     
-def plot_lightcurve(xtr_sources, title="Lightcurve", save=False):
+def plot_lightcurve(xtr_sources, title="Lightcurve", peak_flux=False, save=False):
     fig = plt.figure(figsize=(20,5))
     ax = fig.add_subplot(111)
-    ax.plot(xtr_sources["taustart_ts"], xtr_sources["f_int"]*1.e3, marker="None")
+    if peak_flux:
+        flux_to_use = "f_peak"
+        flux_err_to_use = "f_peak_err"
+        flux_label = "Peak Flux (mJy/beam)"
+    else:
+        flux_to_use = "f_int"
+        flux_err_to_use = "f_int_err"
+        flux_label = "Int. Flux (mJy)"
+    ax.plot(xtr_sources["taustart_ts"], xtr_sources[flux_to_use]*1.e3, marker="None")
     blind = xtr_sources[xtr_sources["extract_type"]==0]
-    ax.errorbar(blind["taustart_ts"], blind["f_int"]*1.e3, yerr=blind.f_int_err*1.e3, marker="s", color="C0", linestyle="None")
+    ax.errorbar(blind["taustart_ts"], blind[flux_to_use]*1.e3, yerr=blind[flux_err_to_use]*1.e3, marker="s", color="C0", linestyle="None")
     forced = xtr_sources[xtr_sources["extract_type"]==1]
-    ax.errorbar(forced["taustart_ts"], forced["f_int"]*1.e3, yerr=forced.f_int_err*1.e3, marker="v", color="C0", linestyle="None")
+    ax.errorbar(forced["taustart_ts"], forced[flux_to_use]*1.e3, yerr=forced[flux_err_to_use]*1.e3, marker="v", color="C0", linestyle="None")
     mon = xtr_sources[xtr_sources["extract_type"]==2]
-    ax.errorbar(mon["taustart_ts"], mon["f_int"]*1.e3, yerr=mon.f_int_err*1.e3, marker="d", color="C0", linestyle="None")
+    ax.errorbar(mon["taustart_ts"], mon[flux_to_use]*1.e3, yerr=mon[flux_err_to_use]*1.e3, marker="d", color="C0", linestyle="None")
     ax.set_title(title)
     ax.set_xlabel("Date")
-    ax.set_ylabel("Flux (mJy)")
+    ax.set_ylabel(flux_label)
     ax.grid(True)
     plt.show()
     if save:
         fig.savefig("{}_lc.png".format(title), bbox_inches="tight")
     
-def create_img(target, extracted_sources, img_data, img_wcs, images, title="ASKAP", skip_first=False, max_cols=4, all_images=False, percentile=99.9, zscale=False, zscale_contrast=0.2, save=False):
+def create_img(target, extracted_sources, img_data, img_wcs, images, imgsize = 2., title="ASKAP", skip_first=False, max_cols=4, 
+    all_images=False, percentile=99.9, zscale=False, zscale_contrast=0.2, save=False, scatter_x=[], scatter_y=[], flat_norm=True):
     num_subplots = len(extracted_sources.index)
+    imgsize = imgsize * u.arcmin
     extracted_sources = extracted_sources.sort_values(by="taustart_ts")
-    if skip_first:
+    if skip_first and len(extracted_sources.index) > 1:
         num_subplots -= 1
     rows = num_subplots/max_cols
     if num_subplots%max_cols != 0:
@@ -209,18 +233,23 @@ def create_img(target, extracted_sources, img_data, img_wcs, images, title="ASKA
     if all_images:
         for i,val in enumerate(sorted(img_data)):
             if i==0 and skip_first:
+                
                 continue
-            cutout = Cutout2D(img_data[val], target, 2.*u.arcmin, wcs=img_wcs[val])
+            cutout = Cutout2D(img_data[val], target, imgsize, wcs=img_wcs[val])
             if not norm_done:
                 if zscale:
                     norm = ImageNormalize(cutout.data, interval=ZScaleInterval(contrast=zscale_contrast))
                 #Use the same scaling throughout (hope that the first image is good!)
                 else:
                     norm = ImageNormalize(cutout.data, interval=PercentileInterval(percentile), stretch=LinearStretch())
-                norm_done = True
+                if flat_norm == True:
+                    norm_done = True
             ax = fig.add_subplot(rows,max_cols,key, projection=cutout.wcs)
             ax.imshow(cutout.data, norm=norm, cmap="gray_r")
             ax.scatter([target.ra.deg], [target.dec.deg], transform=ax.get_transform('world'), marker="o", facecolors="none", edgecolors="r", zorder=10, s=300)
+            if len(scatter_x) > 0:
+                plt.autoscale(False)
+                ax.scatter(scatter_x, scatter_y, transform=ax.get_transform('world'), marker="x", color="C0", zorder=10, s=300)
             thistitle = "{} {}".format(title, images[images["id"]==val].iloc[0]["taustart_ts"].strftime("%Y-%m-%d %H:%M:%S"))
             ax.set_title(thistitle)
             lon = ax.coords[0]
@@ -235,7 +264,7 @@ def create_img(target, extracted_sources, img_data, img_wcs, images, title="ASKA
         for i,row in extracted_sources.iterrows():
             if i==0 and skip_first:
                 continue
-            cutout = Cutout2D(img_data[row.image], target, 2.*u.arcmin, wcs=img_wcs[row.image])
+            cutout = Cutout2D(img_data[row.image], target, imgsize, wcs=img_wcs[row.image])
             # norm = ImageNormalize(cutout.data, interval=ZScaleInterval(contrast=0.2))
             if not norm_done:
                 #Use the same scaling throughout (hope that the first image is good!)
@@ -243,10 +272,14 @@ def create_img(target, extracted_sources, img_data, img_wcs, images, title="ASKA
                     norm = ImageNormalize(cutout.data, interval=ZScaleInterval(contrast=zscale_contrast))
                 else:
                     norm = ImageNormalize(cutout.data, interval=PercentileInterval(percentile), stretch=LinearStretch())
-                norm_done = True
+                if flat_norm == True:
+                    norm_done = True
             ax = fig.add_subplot(rows,max_cols,key, projection=cutout.wcs)
             ax.imshow(cutout.data, norm=norm, cmap="gray_r")
             ax.scatter([target.ra.deg], [target.dec.deg], transform=ax.get_transform('world'), marker="o", facecolors="none", edgecolors="r", zorder=10, s=300)
+            if len(scatter_x) > 0:
+                plt.autoscale(False)
+                ax.scatter(scatter_x, scatter_y, transform=ax.get_transform('world'), marker="x", color="C0", zorder=10, s=300)
             thistitle = "{} {}".format(title, row.taustart_ts.strftime("%Y-%m-%d %H:%M:%S"))
             ax.set_title(thistitle)
             lon = ax.coords[0]

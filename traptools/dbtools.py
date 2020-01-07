@@ -7,6 +7,7 @@ from tkp.db.model import Extractedsource
 from tkp.db.model import Image
 from tkp.db.model import Assocxtrsource
 from tkp.db.model import Skyregion
+from tkp.db.model import Assocskyrgn
 from tkp.db.model import Frequencyband
 from sqlalchemy import *
 from sqlalchemy.orm import relationship
@@ -35,6 +36,7 @@ def GetExtractedSources(session, dataset_id):
     return extracted_sources
 
 def GetRunningCatalogs(session, dataset_id):
+    f = lambda x: [y for y in x]
     running_catalogs_query = session.query(Runningcatalog.id,
                                            Runningcatalog.dataset_id,
                                            Runningcatalog.wm_ra,
@@ -56,9 +58,17 @@ def GetRunningCatalogs(session, dataset_id):
                                            Varmetric.lightcurve_median,
                                            Varmetric.v_int,
                                            Varmetric.eta_int,
-                                           Frequencyband.freq_central
-                                          ).select_from(join(Runningcatalog,RunningcatalogFlux).join(Varmetric).join(Frequencyband)).filter(Runningcatalog.dataset_id == dataset_id)
+                                           Frequencyband.freq_central,
+                                           Assocskyrgn.skyrgn_id
+                                          ).select_from(join(Runningcatalog,RunningcatalogFlux).join(Varmetric).join(Frequencyband).join(Assocskyrgn)).filter(Runningcatalog.dataset_id == dataset_id)
     running_catalogs = pd.read_sql(running_catalogs_query.statement, session.bind).sort_values(by="id")
+    skyregion_combined = running_catalogs.groupby(['id',])["skyrgn"].agg(f)
+    running_catalogs = running_catalogs[~running_catalogs.duplicated(subset="id")]
+    running_catalogs.set_index(keys="id", inplace=True)
+    running_catalogs.drop("skyrgn", inplace=True, axis=1)
+    running_catalogs = running_catalogs.join(skyregion_combined)
+    running_catalogs.reset_index(inplace=True)
+    
     return running_catalogs
 
 def GetImages(session, dataset_id):
