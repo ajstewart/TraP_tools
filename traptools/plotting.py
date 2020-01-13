@@ -214,7 +214,7 @@ def plot_lightcurve(xtr_sources, title="Lightcurve", peak_flux=False, save=False
     if save:
         fig.savefig("{}_lc.png".format(title), bbox_inches="tight")
     
-def create_img(target, extracted_sources, img_data, img_wcs, images, imgsize = 2., title="ASKAP", skip_first=False, max_cols=4, 
+def create_img(target, extracted_sources, img_data, img_wcs, images, skyrgn, img_skyrgns, imgsize = 2., title="ASKAP", skip_first=False, max_cols=4, 
     all_images=False, percentile=99.9, zscale=False, zscale_contrast=0.2, save=False, scatter_x=[], scatter_y=[], flat_norm=True):
     num_subplots = len(extracted_sources.index)
     imgsize = imgsize * u.arcmin
@@ -230,8 +230,15 @@ def create_img(target, extracted_sources, img_data, img_wcs, images, imgsize = 2
         fig = plt.figure(figsize=(15,15*int(rows/max_cols)))
     else:
         fig = plt.figure(figsize=(20,10))
+    all_images_ids = []
+    for i in sorted(img_data.keys()):
+        if img_skyrgns[i] not in skyrgn:
+            continue
+        else:
+            all_images_ids.append(i)
     if all_images:
-        for i,val in enumerate(sorted(img_data)):
+        for i,val in enumerate(all_images_ids):
+            
             if i==0 and skip_first:
                 
                 continue
