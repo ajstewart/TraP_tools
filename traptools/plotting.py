@@ -208,7 +208,7 @@ def plot_lightcurve(xtr_sources, title="Lightcurve", peak_flux=False, save=False
     mon = xtr_sources[xtr_sources["extract_type"]==2]
     ax.errorbar(mon["taustart_ts"], mon[flux_to_use]*1.e3, yerr=mon[flux_err_to_use]*1.e3, marker="d", color="C0", linestyle="None")
     if plot_limits:
-        ax.plot(plot_limits_dates, plot_limits_values*1.e3*plot_limits_sigma, marker="v", color="C1")
+        ax.plot(plot_limits_dates, [i*1.e3*plot_limits_sigma for i in plot_limits_values], marker="v", color="C1")
     ax.set_title(title)
     ax.set_xlabel("Date")
     ax.set_ylabel(flux_label)
