@@ -188,7 +188,8 @@ def eta_vs_v_plot(df, sigcutx, sigcuty, paramx, paramy, peak=False):
     plt.show()
     plt.close()
     
-def plot_lightcurve(xtr_sources, title="Lightcurve", peak_flux=False, save=False):
+def plot_lightcurve(xtr_sources, title="Lightcurve", peak_flux=False, save=False, plot_limits=False,
+                    plot_limits_dates=[], plot_limits_values=[], plot_limits_sigma=5.):
     fig = plt.figure(figsize=(20,5))
     ax = fig.add_subplot(111)
     if peak_flux:
@@ -206,6 +207,8 @@ def plot_lightcurve(xtr_sources, title="Lightcurve", peak_flux=False, save=False
     ax.errorbar(forced["taustart_ts"], forced[flux_to_use]*1.e3, yerr=forced[flux_err_to_use]*1.e3, marker="v", color="C0", linestyle="None")
     mon = xtr_sources[xtr_sources["extract_type"]==2]
     ax.errorbar(mon["taustart_ts"], mon[flux_to_use]*1.e3, yerr=mon[flux_err_to_use]*1.e3, marker="d", color="C0", linestyle="None")
+    if plot_limits:
+        ax.plot(plot_limits_dates, plot_limits_values*1.e3*plot_limits_sigma, marker="v", color="C1")
     ax.set_title(title)
     ax.set_xlabel("Date")
     ax.set_ylabel(flux_label)
